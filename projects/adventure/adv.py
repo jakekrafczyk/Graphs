@@ -12,9 +12,9 @@ world = World()
 # You may uncomment the smaller graphs for development and testing purposes.
 # map_file = "maps/test_line.txt"
 #map_file = "maps/test_cross.txt"
-# map_file = "maps/test_loop.txt"
-map_file = "maps/test_loop_fork.txt"
-# map_file = "maps/main_maze.txt"
+#map_file = "maps/test_loop.txt"
+#map_file = "maps/test_loop_fork.txt"
+map_file = "maps/main_maze.txt"
 
 # Loads the map into a dictionary
 room_graph=literal_eval(open(map_file, "r").read())
@@ -50,31 +50,17 @@ directions before you can add it to your traversal path.
 
 traversal_path = []
 
-graph = {
-  0: {'n': '?', 's': '?', 'w': '?', 'e': '?'}
-}
+reverse_path = []
 
-class Queue():
-    # Queue is for BFT and Stack is for DFT
-    # 
-    def __init__(self):
-        self.queue = []
-    def enqueue(self, value):
-        self.queue.append(value)
-    def dequeue(self):
-        if self.size() > 0:
-            # here is the difference- for Queue we pop the value thats
-            # at the beginning of the list, whereas with Stack we pop
-            # the last value in the list
-            return self.queue.pop(0)
-        else:
-            return None
-    def size(self):
-        return len(self.queue)
+# graph's key is the room number, the values are directions
+graph = {}
+graph[player.current_room.id] = player.current_room.get_exits()
 
+# graph[player.current_room.id].pop()
+# player.travel('n')
+# traversal_path.append('n')
+# reverse_path.append('s')
 
-# direction goes in the queue, and room_id can be called with player.current_room.id
-# q_path[-1] is the last direction we moved
 
 def reverse(a):
         if a == "n":
@@ -86,219 +72,60 @@ def reverse(a):
         elif a == 'w':
             return 'e'
 
-def bfs(starting_vertex):
-        """
-        Return a list containing the shortest path from
-        starting_vertex to destination_vertex in
-        breath-first order.
-        """
-        # need to keep track of each path and the minimum path length
-        # create an empty queue
-        q = Queue()
-        d = Queue()
+counter = 0
 
-        # create a set to store the visited directions
-        visited = set()        #USE GRAPH INSTEAD
+# BREAK EACH SITUATION DOWN, MAKE SURE IT COVERS ALL EDGE CASES AND THEN MOVE ON TO THE NEXT SITUATION
 
-        # init enqueue the starting node
-        q.enqueue([starting_vertex])
+while len(graph) < 500:
+    # if we haven't been to this room before
+    if player.current_room.id not in graph:
+        #counter += 1
+        print('new room',player.current_room.id)
+        # store it in our graph
+        graph[player.current_room.id] = player.current_room.get_exits()
 
-        d_path = []
-        
+        # identify the last room and remove it from the graph so its not an option
+        # this ensures we do not go back down the same path unless we hit a dead end
+        last_room = reverse_path[-1]
+        graph[player.current_room.id].remove(last_room)
 
-        
+    # if we're at a dead end or a room that we've already passed through all the exits
+    elif len(graph[player.current_room.id]) == 0:
+        #counter += 1
+        print('dead end/backtrack',player.current_room.id)
 
-        while q.size() > 0:
-            
-            # Dequeue the first item- q path is a queue of room ids
-            q_path = q.dequeue()
-            #last_room = q_path[-1]
-            print('q',q_path)
+        # identify the last room
+        #print('r',reverse_path)
+        last_room = reverse_path[-1]
 
-            # If it's not been visited:
-            #if last_d not in graph:
-            
+        # then remove it from the reverse path since we're backtracking
+        reverse_path.pop()
 
+        # then add it to the traversal path
+        traversal_path.append(last_room)
 
-            exits = graph[player.current_room.id]
-            
-            #print(exits)
-            # mark as visited
-            if player.current_room.id not in visited:
-                visited.add(player.current_room.id)
-            
+        # then move back to the last room
+        player.travel(last_room)
 
-            # NEED TO CHANGE THE ORDER SO THAT MOVING INTO A NEW ROOM IS THE FIRST THING DONE AFTER
-            # DEQUEUING Q_PATH
+    # if neither of the above situations apply, ie we're in a room we've been to before
+    # and haven't tried all the exits
+    else:
+        #counter += 1
+        print('found new exit',player.current_room.id)
+        # identify the last direction listed for the current room
+        visit = graph[player.current_room.id][-1]
 
-            # Add all neighbors to the queue
-            for direction, next_room in exits.items():
-                #print(next_room)
-                # copy the path
-                if next_room == '?':
-                    last_room = player.current_room.id
+        # remove the current room from the graph
+        graph[player.current_room.id].pop()
 
-                    player.travel(direction)
-                    #add a direction to the path
-                    print('found new room',player.current_room.id)
-                    d_path.append(direction)
+        # add the direction to the traversal path
+        traversal_path.append(visit)
 
-                    graph[last_room][direction] = player.current_room.id
+        # add the reverse of the direction to the reverse path so we can backtrack later 
+        reverse_path.append(reverse(visit))
 
-                    if player.current_room.id not in graph:
-                        graph[player.current_room.id] = {}
-
-                    graph[player.current_room.id][reverse(direction)] = last_room
-
-                    for dirs in player.current_room.get_exits():
-                        #print(dirs)
-                        
-                        if dirs not in graph[player.current_room.id]:
-                            graph[player.current_room.id][dirs] = '?'
-                        # print(d_path)
-                    #print('g',graph)
-
-                    return d_path
-
-                else:
-                    if next_room not in visited:
-                        #d.enqueue([direction])
-                        #d_path.append(direction)
-                        #print('d',d)
-                        temp_path = list(q_path)
-                        temp_path.append(next_room)
-                        q.enqueue(temp_path)
-                        #print('t',temp_path)
-                        #print('q',q)
-                        
-
-                    else:
-                        backtrack = direction
-
-                
-
-                
-                # temp_path = list(q_path)
-                # temp_path.append(next_room)
-
-                # #print('q',q_path)
-                # # d_path.append(direction)
-                # #temp_d = list()
-                # d.enqueue(direction)            # its just bouncing back and forth, must not be recording any
-                #                                 # previously visited places. Need to record and check these with
-                #                                 # the graph, and make sure d_path is queueing correctly
-                # #print('d',d_path)
-                
-                # q.enqueue(temp_path)
-
-        return None
-
-while len(graph) < 501:
-    print('cur room',player.current_room.id)
-    path = bfs(player.current_room.id)    #need to convert the room_id output 
-    print('path',path)
-    print('g',graph)
-
-# direction = 'n'
-
-# # THIS IS THE "NEXT PATH" LOOP
-# while len(graph) < 501:
-    
-#     # create an empty queue to store the current path
-#     q = Queue()
-
-#     # create a set to store the visited rooms
-#     #visited = set()
-
-#     # init enqueue the starting node
-#     q.enqueue([direction])
-
-#     # while the size of the queue is greater than 0
-
-#     # THIS IS THE BFS LOOP
-#     while q.size() > 0:
-        
-#         # Dequeue the first path
-#         q_path = q.dequeue()
-#         #print('qpath', q_path)
-
-#         # set d = the last value in q_path, ie the last direction moved
-#         last_d = q_path[-1]
-#         #print('last', last_d)
-
-#         # move the player in a new direction
-#         player.travel(last_d)
-
-#         #player room id and graph need to be linked
-#         # identify current room, loop through the get_exits options, store them in the graph,
-#         # then move the player into one, then identify the next room and reset the loop
-
-#         cur_room_id = player.current_room.id
-#         print('id,',cur_room_id)
-
-#         exits = player.current_room.get_exits()
-#         print(exits)
-
-#         def reverse(a):
-#             if a == "n":
-#                 return 's'
-#             elif a == "s":
-#                 return 'n'
-#             elif a == 'e':
-#                 return 'w'
-#             elif a == 'w':
-#                 return 'e'
-
-#         graph[cur_room_id] = {}
-#         for x in exits:
-#             # if we haven't visited this room before, then move into it, record it, and move back to the
-#             # original room
-#             if graph[cur_room_id][x] == '?':
-                
-#                 #print(graph[cur_room_id])
-#                 # player.travel(x)
-#                 # cur_room_id = player.current_room.id
-#                 # graph[cur_room_id][x] = '?'
-
-#                 # player.travel(reverse(x))
-                
-#             else:
-#                 # else we queue the room to enter later
-#                 q.enqueue(graph[cur_room_id][x])
-                
-
-        
-
-#                     # SELF.VISITED NEEDS TO BE RESET OR INITIATED ELSEWHERE
-#         # If it's not been visited:
-#         #if v not in visited:
-        
-#         # if this is a new room
-#         if graph[cur_room_id] == '?':
-            
-#             # IF SO, RETURN the PATH we took to get to the new room
-#             traversal_path.append(q_path)
-            
-#             # and set last direction
-#             direction = q_path[-1]
-#             player.travel(direction)
-
-#             # fill in the graph
-#             graph[cur_room_id] = player.current_room.get_exits()
-#             print('exits',player.current_room.get_exits())
-            
-#         # Mark as visited (i.e. add to the visited set)
-#         visited.add(v)
-        
-#         # Add all neighbors to the queue
-#         for next_direction in player.current_room.get_exits():
-#             # copy the path
-#             # temp_path = list(q_path)
-#             # # this adds a new room onto temp path(q_path)
-#             # temp_path.append(next_room)
-            
-#             # q.enqueue(temp_path)
-#             direction = next_direction      # NEED TO START A NEW QUEUE FOR DIRECTIONS
+        # move to the next room
+        player.travel(visit)
 
 
 
@@ -322,12 +149,12 @@ else:
 #######
 # UNCOMMENT TO WALK AROUND
 #######
-player.current_room.print_room_description(player)
-while True:
-    cmds = input("-> ").lower().split(" ")
-    if cmds[0] in ["n", "s", "e", "w"]:
-        player.travel(cmds[0], True)
-    elif cmds[0] == "q":
-        break
-    else:
-        print("I did not understand that command.")
+# player.current_room.print_room_description(player)
+# while True:
+#     cmds = input("-> ").lower().split(" ")
+#     if cmds[0] in ["n", "s", "e", "w"]:
+#         player.travel(cmds[0], True)
+#     elif cmds[0] == "q":
+#         break
+#     else:
+#         print("I did not understand that command.")
